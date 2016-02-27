@@ -18,9 +18,8 @@ if len(sys.argv) < 2:
     print('It is recommended to run this on a GPU')
     exit()
     
-text = open(sys.argv[1]).read().lower()
-
-text = re.sub(r'\W+', ' ', text)
+text = open(sys.argv[1]).read()
+text = re.sub(r'[^a-zA-Z0-9\.\n]+', ' ', text).lower()
 
 run_name = 'bernie'
 print('corpus length:', len(text))
