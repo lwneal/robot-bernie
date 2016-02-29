@@ -19,11 +19,9 @@ body,html
 }
 .container
 {
-  width:450px;
+  width:100%;
   cursor:default;
   margin:20px auto;
-  max-height:350px;
-  overflow-y:scroll;
 }
 .container::-webkit-scrollbar 
 {
@@ -45,7 +43,7 @@ background: #9F6905;
 .Area
 {
   margin:0 auto;
-  width:400px;
+  width:80%;
   background-color:rgba(240, 240, 240, 0.2);
   display:table;
   padding:5px;
@@ -85,7 +83,7 @@ font-family: tahoma;
 font-size: 13px;
   font-weight:lighter;
 line-height: 30px;
-  width:300px;
+  width:70%;
   border:1px solid #f0f0f0;
   background-color:rgba(255, 255, 255, 0.6);
   margin-top:10px;
