@@ -31,4 +31,4 @@ def route_person():
     return app.send_static_file('generic_person.png')
 
 if __name__ == '__main__':
-    app.run('0.0.0.0', port=80)
+    app.run('0.0.0.0', port=8000)
