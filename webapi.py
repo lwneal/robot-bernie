@@ -2,38 +2,23 @@ import flask
 import bernie
 
 app = flask.Flask(__name__, static_url_path='/static/')
-model = bernie.load_model()
+#model = bernie.load_model()
 
 @app.route('/ask_question')
 def ask_question():
     question = flask.request.args.get('question')
+    print 'Received question: {}'.format(question)
     answer = bernie.ask_bernie(model, question)
+    print 'Returning answer: {}'.format(answer)
     return answer
 
 @app.route('/')
 def route_index():
     return app.send_static_file('bernie.html')
 
-@app.route('/bernie.js')
-def route_js():
-    return app.send_static_file('bernie.js')
-
-@app.route('/bernie.css')
-def route_css():
-    return app.send_static_file('bernie.css')
-
-@app.route('/bernie.jpg')
-def route_jpg():
-    return app.send_static_file('bernie.jpg')
-
-@app.route('/loading.gif')
-def route_loading_gif():
-    return app.send_static_file('loading.gif')
-
-
-@app.route('/generic_person.png')
-def route_person():
-    return app.send_static_file('generic_person.png')
+@app.route('/<path:path>')
+def send_static_file(path):
+    return flask.send_from_directory('static', path)
 
 if __name__ == '__main__':
     app.run('0.0.0.0', port=8000)
