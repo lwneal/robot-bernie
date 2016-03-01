@@ -15,7 +15,7 @@ import traceback
 import tempfile
 import re
 
-MODEL_FILENAME = 'model.bernie.iter30.h5'
+MODEL_FILENAME = 'model.bernie.iter45.h5'
 char_indices = {'\n': 0, ' ': 1, '.': 2, '1': 3, '0': 4, '3': 5, '2': 6, '5': 7, '4': 8, '7': 9, '6': 10, '9': 11, '8': 12, 'a': 13, 'c': 14, 'b': 15, 'e': 16, 'd': 17, 'g': 18, 'f': 19, 'i': 20, 'h': 21, 'k': 22, 'j': 23, 'm': 24, 'l': 25, 'o': 26, 'n': 27, 'q': 28, 'p': 29, 's': 30, 'r': 31, 'u': 32, 't': 33, 'w': 34, 'v': 35, 'y': 36, 'x': 37, 'z': 38}
 maxlen = 20
 
@@ -54,15 +54,15 @@ def load_model():
 
 def ask_bernie(model, question):
     indices_char = {char_indices[key]: key for key in char_indices}
-    sentence = question[:maxlen].lower()
+    sentence = question[-maxlen:].lower()
     sentence = re.sub(r'\W+', ' ', sentence)
     if len(sentence) < maxlen:
         sentence = ' ' * (maxlen - len(sentence)) + sentence
 
-    diversity = random.choice([0.5, 1.0, 1.5])
+    diversity = random.choice([.3, .5, .7, .9])
     generated = sentence
     print()
-    for i in range(200):
+    for i in range(random.randint(100, 300)):
         x = np.zeros((1, maxlen, len(char_indices)))
         for t, char in enumerate(sentence):
             x[0, t, char_indices[char]] = 1.
@@ -74,9 +74,9 @@ def ask_bernie(model, question):
         generated += next_char
         sentence = sentence[1:] + next_char
 
-    # Strip off last word and make it a sentence
+    # Strip off last word and capitalize sentences
     generated = ' '.join(generated.split()[:-1])
-    generated = generated.capitalize() + '.'
+    generated = '. '.join([s.strip().capitalize() for s in generated.split('.')]) + '.'
     return generated
 
 
