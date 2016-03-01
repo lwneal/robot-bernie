@@ -2,7 +2,7 @@ import flask
 import bernie
 
 app = flask.Flask(__name__, static_url_path='/static/')
-#model = bernie.load_model()
+model = bernie.load_model()
 
 @app.route('/ask_question')
 def ask_question():
@@ -21,4 +21,4 @@ def send_static_file(path):
     return flask.send_from_directory('static', path)
 
 if __name__ == '__main__':
-    app.run('0.0.0.0', port=8000)
+    app.run('0.0.0.0', port=8000, debug=True)

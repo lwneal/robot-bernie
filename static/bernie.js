@@ -59,7 +59,7 @@ function askBernie() {
 }
 
 function deleteOverflow() {
-    if ($('.Area').length > 5) {
+    while ($('.Area').length > 5) {
         $('.Area')[0].remove()
     }
 }
