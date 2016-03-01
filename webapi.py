@@ -21,4 +21,4 @@ def send_static_file(path):
     return flask.send_from_directory('static', path)
 
 if __name__ == '__main__':
-    app.run('0.0.0.0', port=8000, debug=True)
+    app.run('0.0.0.0', port=8000)
