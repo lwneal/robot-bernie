@@ -3,7 +3,7 @@
 var user_template = `
     <div class="Area"> 
         <div class="R">
-            <img src="/generic_person.png"/>
+            <img class="portrait" src="/generic_person.png"/>
         </div>    
         <div class="text L textL">$TEXT</div>    
     </div>
@@ -12,13 +12,14 @@ var bernie_template = `
     <div class="Area"> 
         <div class="L">
             <a href="https://berniesanders.com">
-                <img src="/bernie.jpg"/>
+                <img class="portrait" src="/bernie.jpg"/>
                 <div class="tooltip">Senator Robot Bernie Sanders</div>
             </a>
         </div>    
-        <div id='bernieResponse' class="text L textL">$TEXT</div>    
+        <div class="bernieResponse text L textL">$TEXT</div>    
     </div>
 `
+var bernieIsThinking = `<center><img src="/loading.gif"></img></center>`
 $(function() {
     $("#userInput").focus();
 });
@@ -35,8 +36,10 @@ function askBernie() {
     var user_input = $('#userInput').val();
     $('#userInput').val('');
     $('.container').append(user_template.replace('$TEXT', escapeHtml(user_input)));
+    $('.container').append(bernie_template.replace('$TEXT', bernieIsThinking));
     deleteOverflow();
 
+    var lastBubble = $('.bernieResponse:last');
     // Kick off a repsonse from Bernie and display it when available
     // TODO: Handle timeouts from load
     $.ajax({
@@ -45,9 +48,8 @@ function askBernie() {
             'question': user_input
         },
         type: "GET",
-        success: function(data) {
-            $('.container').append(bernie_template.replace('$TEXT', escapeHtml(data)));
-            deleteOverflow();
+        success: function(bernieWisdom) {
+            lastBubble.html(escapeHtml(bernieWisdom));
         },
         error: function(xhr) {
             $('.container').append('<div>Error, Robot Bernie Sanders is overloaded. Try again later.</div>');

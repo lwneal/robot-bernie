@@ -26,6 +26,11 @@ def route_css():
 def route_jpg():
     return app.send_static_file('bernie.jpg')
 
+@app.route('/loading.gif')
+def route_loading_gif():
+    return app.send_static_file('loading.gif')
+
+
 @app.route('/generic_person.png')
 def route_person():
     return app.send_static_file('generic_person.png')
