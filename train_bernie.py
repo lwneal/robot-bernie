@@ -13,7 +13,7 @@ import sys
 import re
 
 if len(sys.argv) < 2:
-    print('Usage: {} text_corpus.txt')
+    print('Usage: {} text_corpus.txt'.format(sys.argv[0]))
     print('Text corpus should be at least 100k characters')
     print('It is recommended to run this on a GPU')
     exit()
