@@ -53,6 +53,7 @@ function install_cuda() {
         clear
         tput setaf 3
         echo "Rebooting in ten seconds. After reboot, run ./$0 again to complete installation."
+        tput setaf 15
         sleep 10
         sudo reboot
     fi
@@ -61,6 +62,7 @@ function install_cuda() {
 function install_essential_packages() {
     sudo apt-get update
     sudo apt-get install -y binutils htop git vim
+    sudo apt-get install libblas-dev liblapack-dev libatlas-base-dev gfortran
     sudo apt-get install -y python-dev
     sudo apt-get install -y python-h5py
     sudo apt-get install -y python-pip
@@ -71,6 +73,7 @@ function install_pip_virtualenv() {
     sudo rm -rf venv
     virtualenv venv
     echo "source ~/venv/bin/activate" >> ~/.bashrc
+    source ~/.bashrc
 }
 
 function install_python_packages() {
