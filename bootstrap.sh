@@ -56,13 +56,14 @@ function install_cuda() {
         tput setaf 15
         sleep 10
         sudo reboot
+        exit 1
     fi
 }
 
 function install_essential_packages() {
     sudo apt-get update
     sudo apt-get install -y binutils htop git vim
-    sudo apt-get install libblas-dev liblapack-dev libatlas-base-dev gfortran
+    sudo apt-get install -y libblas-dev liblapack-dev libatlas-base-dev gfortran
     sudo apt-get install -y python-dev
     sudo apt-get install -y python-h5py
     sudo apt-get install -y python-pip
@@ -98,6 +99,6 @@ install_pip_virtualenv
 install_python_packages
 
 echo -e "\n[global]\nfloatX=float32\ndevice=gpu\n" >> ~/.theanorc
-wget "https://raw.githubusercontent.com/lwneal/robot-bernie/master/gputest.py"
+wget -nc "https://raw.githubusercontent.com/lwneal/robot-bernie/master/gputest.py"
 python gputest.py
 
