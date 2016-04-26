@@ -9,19 +9,18 @@ import sys
 import re
 
 
-def train_model(wordvectors):
-    maxlen = 16
+def train_model(wordvectors, maxlen):
     word_count, dimensionality = wordvectors.shape
     # build the model: 2 stacked LSTM
     print('Build model...')
     model = Sequential()
-    model.add(LSTM(128, return_sequences=True, input_shape=(maxlen, dimensionality)))
-    model.add(Dropout(0.2))
-    model.add(LSTM(128, return_sequences=False))
-    model.add(Dropout(0.2))
+    model.add(LSTM(256, return_sequences=True, input_shape=(maxlen, dimensionality)))
+    #model.add(Dropout(0.2))
+    model.add(LSTM(256, return_sequences=False))
+    #model.add(Dropout(0.2))
     model.add(Dense(dimensionality))
     model.add(Activation('tanh'))
-    model.compile(loss='cosine_proximity', optimizer='sgd')
+    model.compile(loss='mean_squared_error', optimizer='rmsprop')
     #model.compile(loss='categorical_crossentropy', optimizer='rmsprop')
     print('Finished compiling LSTM')
 

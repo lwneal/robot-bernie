@@ -40,12 +40,14 @@ def parse_dictionary(lines):
 def closest_word(word2vec, unknown_vector):
     best_distance = 1000
     best_word = '?'
+    best_vector = unknown_vector
     for word, vector in word2vec.items():
         distance = np.linalg.norm(unknown_vector - vector)
         if distance < best_distance:
             best_distance = distance
             best_word = word
-    return best_word
+            best_vector = vector
+    return best_word, best_vector
 
 
 def main(dict_file, corpus_file):
@@ -61,23 +63,25 @@ def main(dict_file, corpus_file):
     print("Vectorized {} words".format(len(words)))
     wordvectors = np.asarray([word2vec.get(word) for word in words if word in word2vec])
 
+    maxlen = 2
     iter = 0
-    for model in train_model(wordvectors):
+    for model in train_model(wordvectors, maxlen):
         iter += 1
         print("Trained model iteration {}".format(iter))
 
-        maxlen = 16
         idx = random.randint(0, wordvectors.shape[0] - maxlen)
         x = wordvectors[idx:idx + maxlen]
 
-        print("Input: {}".format(' '.join([closest_word(word2vec, v) for v in x])))
+        sys.stdout.write(' '.join([closest_word(word2vec, v)[0] for v in x]))
         for i in range(10):
             y = model.predict(np.asarray([x]))[0]
-            predicted_word = closest_word(word2vec, y)
+            predicted_word, predicted_vector = closest_word(word2vec, y)
+            sys.stdout.write(" {}".format(predicted_word))
+            sys.stdout.flush()
             distance = np.linalg.norm(word2vec[predicted_word] - y)
-            print "Output: {} (distance {})".format(predicted_word, distance)
-            y_column = y.reshape((1, -1))
+            y_column = predicted_vector.reshape((1, -1))
             x = np.concatenate( (x[1:], y_column) )
+        sys.stdout.write('\n')
 
 
 if __name__ == '__main__':
