@@ -71,7 +71,7 @@ def sample(a, temperature=.5):
     a = np.exp(a) / np.sum(np.exp(a))
     return np.argmax(np.random.multinomial(1, a, 1))
 
-def predict(model, current_char, char_indices, indices_to_char, batch_size=BATCH_SIZE, temperature=0.5):
+def predict(model, current_char, char_indices, indices_to_char, batch_size=BATCH_SIZE, temperature=0.1):
     # Ignore all but one value in the batch
     X = np.zeros((batch_size, 1, len(char_indices)))
     X[0, 0, char_indices[current_char]] = 1
