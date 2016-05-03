@@ -11,7 +11,7 @@ import re
 import train_bernie
 from train_bernie import build_model, predict, make_char_lookup_table
 
-MODEL_FILENAME = 'model.bernie_low_rate.iter91.h5'
+MODEL_FILENAME = 'model.bernie_shuffle.iter999.h5'
 TEXT_FILENAME = 'bernie_corpus.txt'
 
 def main():
