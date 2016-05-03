@@ -11,7 +11,7 @@ import re
 import train_bernie
 from train_bernie import build_model, predict, make_char_lookup_table
 
-MODEL_FILENAME = 'model.bernie_shuffle.iter999.h5'
+MODEL_FILENAME = 'models/bernie_gru.iter432.h5'
 TEXT_FILENAME = 'bernie_corpus.txt'
 
 def main():
@@ -22,7 +22,7 @@ def main():
     while True:
         try:
             question = raw_input('> ')
-            print(ask_bernie(model, question, char_indices, indices_char))
+            ask_bernie(model, question, char_indices, indices_char)
         except Exception as e:
             traceback.print_exc(file=sys.stdout)
             print('Error, Entering debugger')
@@ -45,13 +45,11 @@ def ask_bernie(model, question, char_indices, indices_char):
 
     sys.stdout.write("Output: ")
     for c in sentence:
-        predict(model, c, char_indices, indices_char)
-        sys.stdout.write(c)
-        sys.stdout.flush()
+        predict(model, c, char_indices, indices_char, temperature=0.1)
 
     characters = []
     for i in range(512):
-        c = predict(model, c, char_indices, indices_char)
+        c = predict(model, c, char_indices, indices_char, temperature=0.8)
         sys.stdout.write(c)
         sys.stdout.flush()
         characters.append(c)

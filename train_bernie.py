@@ -80,13 +80,13 @@ def build_model(char_count, batch_size=BATCH_SIZE):
     model.compile(loss='categorical_crossentropy', optimizer=optimizer)
     return model
 
-def sample(a, temperature=.1):
+def sample(a, temperature=.5):
     # helper function to sample an index from a probability array
     a = np.log(a) / temperature
     a = np.exp(a) / np.sum(np.exp(a))
     return np.argmax(np.random.multinomial(1, a, 1))
 
-def predict(model, current_char, char_indices, indices_to_char, batch_size=BATCH_SIZE, temperature=0.1):
+def predict(model, current_char, char_indices, indices_to_char, batch_size=BATCH_SIZE, temperature=0.2):
     # Ignore all but one value in the batch
     X = np.zeros((batch_size, 1, len(char_indices)))
     X[0, 0, char_indices[current_char]] = 1
@@ -134,7 +134,7 @@ def main(run_name, text):
         print('Iteration {}'.format(iteration))
         model.reset_states()
 
-        for i in range(512):
+        for i in range(1024 * 4):
             X, y = next(generator)
             results = model.train_on_batch(X, y)
             sys.stdout.write("\rBatch {} Loss: {}\t".format(i, results))
