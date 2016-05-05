@@ -11,7 +11,7 @@ import re
 import train_bernie
 from train_bernie import build_model, predict, make_char_lookup_table
 
-MODEL_FILENAME = 'models/bernie_gru.iter432.h5'
+MODEL_FILENAME = 'models/wiki.iter999.h5'
 TEXT_FILENAME = 'bernie_corpus.txt'
 
 def main():
@@ -45,11 +45,12 @@ def ask_bernie(model, question, char_indices, indices_char):
 
     sys.stdout.write("Output: ")
     for c in sentence:
-        predict(model, c, char_indices, indices_char, temperature=0.1)
+        predict(model, c, char_indices, indices_char, temperature=0.0)
 
     characters = []
     for i in range(512):
-        c = predict(model, c, char_indices, indices_char, temperature=0.8)
+        temp = 0.8 if c == ' ' else 0.2
+        c = predict(model, c, char_indices, indices_char, temperature=0)
         sys.stdout.write(c)
         sys.stdout.flush()
         characters.append(c)

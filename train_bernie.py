@@ -81,6 +81,8 @@ def build_model(char_count, batch_size=BATCH_SIZE):
     return model
 
 def sample(a, temperature=.5):
+    if temperature == 0:
+        return np.argmax(a)
     # helper function to sample an index from a probability array
     a = np.log(a) / temperature
     a = np.exp(a) / np.sum(np.exp(a))
