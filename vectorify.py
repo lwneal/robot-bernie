@@ -1,16 +1,18 @@
 """
 Usage:
-        vectorify.py --dictionary <glove.txt> --input <corpus.txt>
+        vectorify.py --dictionary <glove.txt> --input <corpus.txt> --tag <name>
 
 Arguments:
         -d, --dictionary <glove.txt>    A pretrained word vector model
         -i, --input <corpus.txt>        Input text to train on
+        -t, --tag <name>                Name to identify this experiment
 """
 import re
 import sys
 import docopt
 import numpy as np
 import random
+import time
 
 
 def parse_dictionary(lines):
@@ -48,42 +50,40 @@ def closest_word(word2vec, unknown_vector):
     return best_word, best_vector
 
 
-def train_model(wordvectors, maxlen):
+def train_model(wordvectors, batch_size):
     from keras.models import Sequential
     from keras.layers.core import Dense, Activation, Dropout
     from keras.layers.recurrent import GRU
+    from keras.optimizers import RMSprop
     word_count, dimensionality = wordvectors.shape
     print('Compiling model...')
     model = Sequential()
-    model.add(GRU(256, input_shape=(maxlen, dimensionality)))
+    model.add(GRU(512, return_sequences=True, batch_input_shape=(batch_size, 1, dimensionality), stateful=True))
+    model.add(Dropout(0.2))
+    model.add(GRU(512, return_sequences=False, stateful=True))
     model.add(Dropout(0.2))
     model.add(Dense(dimensionality))
     model.add(Activation('tanh'))
-    model.compile(loss='mean_squared_error', optimizer='rmsprop')
+    optimizer = RMSprop(lr=.001)
+    model.compile(loss='mean_squared_error', optimizer=optimizer)
     print('Finished compiling model')
-
-    # cut the text in semi-redundant sequences of maxlen characters
-    step = 1
-    sentences = []
-    next_words = []
-    for i in range(0, len(wordvectors) - maxlen, step):
-        sentences.append(wordvectors[i: i + maxlen])
-        next_words.append(wordvectors[i + maxlen])
-    print('Training on {} sequences'.format(len(sentences)))
-
-    X = np.asarray(sentences)
-    y = np.asarray(next_words)
-
-    for iteration in range(1, 1000):
-        print()
-        print('-' * 50)
-        print('Iteration', iteration)
-        model.fit(X, y, batch_size=256, nb_epoch=6, verbose=1)
-        yield model
+    return model
 
 
+def generate_training_data(wordvectors, batch_size):
+    word_count, dimensionality = wordvectors.shape
+    indices = [random.randint(1, len(wordvectors) - 1) for i in range(batch_size)]
+    while True:
+        X = np.array([wordvectors[i] for i in indices]).reshape( (batch_size, 1, dimensionality) )
+        y = np.array([wordvectors[i+1] for i in indices])
+        yield (X, y)
+        for i in range(len(indices)):
+            indices[i] += 1
+            if indices[i] >= len(wordvectors) - 1:
+                indices[i] = 0
 
-def main(dict_file, corpus_file):
+
+def main(dict_file, corpus_file, tag):
     print("Loading dictionary {}".format(dict_file))
     lines = open(dict_file).readlines()
     print("Loaded {} lines".format(len(lines)))
@@ -95,32 +95,55 @@ def main(dict_file, corpus_file):
     words = text.split()
     print("Vectorized {} words".format(len(words)))
     wordvectors = np.asarray([word2vec.get(word) for word in words if word in word2vec])
+    word_count, dimensionality = wordvectors.shape
 
-    maxlen = 4
-    iter = 0
-    for model in train_model(wordvectors, maxlen):
-        iter += 1
-        print("Trained model iteration {}".format(iter))
+    batch_size = 128
+    model = train_model(wordvectors, batch_size)
+    generator = generate_training_data(wordvectors, batch_size)
 
-        idx = random.randint(0, wordvectors.shape[0] - maxlen)
-        x = wordvectors[idx:idx + maxlen]
+    start_time = time.time()
+    for iteration in range(100):
+        print("Starting iteration {} after {} seconds".format(iteration, time.time() - start_time))
+        batches_per_minute = 2 ** 18 / batch_size 
+        for i in range(batches_per_minute):
+            X, y = next(generator)
+            results = model.train_on_batch(X, y)
+            sys.stdout.write("\rBatch {} Loss: {}\t".format(i, results))
+            sys.stdout.flush()
+        sys.stdout.write('\n')
 
-        sys.stdout.write(' '.join([closest_word(word2vec, v)[0] for v in x]))
-        for i in range(maxlen):
-            y = model.predict(np.asarray([x]))[0]
+        input_len = 20
+        idx = random.randint(0, wordvectors.shape[0] - input_len)
+        context = wordvectors[idx:idx + input_len]
+
+        for word in context:
+            in_array = np.zeros( (batch_size, 1, dimensionality) )
+            in_array[0] = word
+            model.predict(in_array, batch_size=batch_size)[0]
+
+        print "Input: "
+        for word in context[-4:]:
+            predicted_word, predicted_vector = closest_word(word2vec, word)
+            sys.stdout.write(' ' + predicted_word)
+            sys.stdout.write('\n')
+
+        print "Output: "
+        for i in range(5):
+            in_array = np.zeros( (batch_size, 1, dimensionality) )
+            in_array[0] = word
+            y = model.predict(in_array, batch_size=batch_size)[0]
             predicted_word, predicted_vector = closest_word(word2vec, y)
             sys.stdout.write(" {}".format(predicted_word))
             sys.stdout.flush()
-            distance = np.linalg.norm(word2vec[predicted_word] - y)
-            y_column = predicted_vector.reshape((1, -1))
-            x = np.concatenate( (x[1:], y_column) )
         sys.stdout.write('\n')
-    print("Finished run with NO normalization of input vectors, maxlen {}, GRU single layer".format(maxlen))
-    import pdb; pdb.set_trace()
+
+        model.save_weights('model.{}.iter{}.h5'.format(tag, iteration))
+    print("Finished")
 
 
 if __name__ == '__main__':
     arguments = docopt.docopt(__doc__)
     dict_file = arguments['--dictionary']
     corpus_file = arguments['--input']
-    main(dict_file, corpus_file)
+    tag = arguments['--tag']
+    main(dict_file, corpus_file, tag)
