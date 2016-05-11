@@ -15,7 +15,7 @@ import random
 import time
 
 
-def parse_dictionary(lines):
+def parse_dictionary(lines, scale_factor=.2):
     word_vectors = {}
     i = 0
     sys.stdout.write("\n")
@@ -26,7 +26,7 @@ def parse_dictionary(lines):
             continue
         word = tokens[0]
         vector = np.asarray([[float(n) for n in tokens[1:]]])[0]
-        word_vectors[word] = vector
+        word_vectors[word] = vector * scale_factor
         if i % 1000 == 0:
             sys.stdout.write("\rProcessed {}/{} ({:.01f} percent)    ".format(i, len(lines), 100.0 * i / len(lines)))
             sys.stdout.flush()
@@ -65,7 +65,7 @@ def train_model(wordvectors, batch_size):
     model.add(Dense(dimensionality))
     model.add(Activation('tanh'))
     optimizer = RMSprop(lr=.001)
-    model.compile(loss='mean_squared_error', optimizer=optimizer)
+    model.compile(loss='mean_absolute_error', optimizer=optimizer)
     print('Finished compiling model')
     return model
 
