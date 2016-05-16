@@ -37,6 +37,15 @@ def parse_dictionary(lines, scale_factor=.2):
     return word_vectors
 
 
+def corpus_vocabulary(words):
+    word_to_idx = {}
+    idx_to_word = {}
+    for idx, word in enumerate(set(words)):
+        word_to_idx[word] = idx 
+        idx_to_word[idx] = word
+    return word_to_idx, idx_to_word
+
+
 def closest_word(word2vec, unknown_vector):
     best_distance = 1000
     best_word = '?'
@@ -50,7 +59,12 @@ def closest_word(word2vec, unknown_vector):
     return best_word, best_vector
 
 
-def train_model(wordvectors, batch_size):
+def build_model(wordvectors, batch_size, vocabulary):
+    """
+    For a 100-dimensional GloVe word vector mapping, input to the network is a set
+    of batch_size vectors, each of length 100.
+    Output is softmax among all possible output words in the vocabulary
+    """
     from keras.models import Sequential
     from keras.layers.core import Dense, Activation, Dropout
     from keras.layers.recurrent import GRU
@@ -62,20 +76,25 @@ def train_model(wordvectors, batch_size):
     model.add(Dropout(0.2))
     model.add(GRU(512, return_sequences=False, stateful=True))
     model.add(Dropout(0.2))
-    model.add(Dense(dimensionality))
-    model.add(Activation('tanh'))
+    model.add(Dense(len(vocabulary)))
+    model.add(Activation('softmax'))
     optimizer = RMSprop(lr=.001)
-    model.compile(loss='mean_absolute_error', optimizer=optimizer)
+    model.compile(loss='categorical_crossentropy', optimizer=optimizer)
     print('Finished compiling model')
     return model
 
 
-def generate_training_data(wordvectors, batch_size):
+def generate_training_data(wordvectors, words, batch_size, word_to_idx):
+    assert len(wordvectors) == len(words)
     word_count, dimensionality = wordvectors.shape
+    output_dim = len(word_to_idx)
     indices = [random.randint(1, len(wordvectors) - 1) for i in range(batch_size)]
     while True:
         X = np.array([wordvectors[i] for i in indices]).reshape( (batch_size, 1, dimensionality) )
-        y = np.array([wordvectors[i+1] for i in indices])
+        y = np.zeros((batch_size, len(word_to_idx)))
+        for idx, row in enumerate(y):
+            word_idx = word_to_idx[words[i]]
+            row[word_idx] = 1
         yield (X, y)
         for i in range(len(indices)):
             indices[i] += 1
@@ -93,18 +112,22 @@ def main(dict_file, corpus_file, tag):
     text = open(corpus_file).read()
     text = re.sub(r'[^a-zA-Z0-9\.]+', ' ', text).lower().replace('.', ' . ')
     words = text.split()
-    print("Vectorized {} words".format(len(words)))
     wordvectors = np.asarray([word2vec.get(word) for word in words if word in word2vec])
+    words = np.asarray([word for word in words if word in word2vec])
+    print("Vectorized {} words".format(len(words)))
     word_count, dimensionality = wordvectors.shape
 
+    word_to_idx, idx_to_word = corpus_vocabulary(words)
+    print("Found {} distinct words in corpus".format(len(word_to_idx)))
+
     batch_size = 128
-    model = train_model(wordvectors, batch_size)
-    generator = generate_training_data(wordvectors, batch_size)
+    model = build_model(wordvectors, batch_size, word_to_idx)
+    generator = generate_training_data(wordvectors, words, batch_size, word_to_idx)
 
     start_time = time.time()
     for iteration in range(100):
         print("Starting iteration {} after {} seconds".format(iteration, time.time() - start_time))
-        batches_per_minute = 2 ** 18 / batch_size 
+        batches_per_minute = 2 ** 16 / batch_size 
         for i in range(batches_per_minute):
             X, y = next(generator)
             results = model.train_on_batch(X, y)
@@ -114,30 +137,30 @@ def main(dict_file, corpus_file, tag):
 
         input_len = 20
         idx = random.randint(0, wordvectors.shape[0] - input_len)
-        context = wordvectors[idx:idx + input_len]
+        context_vectors = wordvectors[idx:idx + input_len]
+        context_words = words[idx:idx + input_len]
 
-        for word in context:
-            in_array = np.zeros( (batch_size, 1, dimensionality) )
-            in_array[0] = word
-            model.predict(in_array, batch_size=batch_size)[0]
-
+        model.reset_states()
         print "Input: "
-        for word in context[-4:]:
-            predicted_word, predicted_vector = closest_word(word2vec, word)
-            sys.stdout.write(' ' + predicted_word)
-            sys.stdout.write('\n')
+        for vector, word in zip(context_vectors, context_words):
+            in_array = np.zeros( (batch_size, 1, dimensionality) )
+            in_array[0] = vector
+            sys.stdout.write(' ' + word)
+            model.predict(in_array, batch_size=batch_size)[0]
+        sys.stdout.write('\n')
 
         print "Output: "
+        predicted_word = word
+        in_array = np.zeros( (batch_size, 1, dimensionality) )
         for i in range(5):
-            in_array = np.zeros( (batch_size, 1, dimensionality) )
-            in_array[0] = word
+            in_array[0] = word2vec[predicted_word]
             y = model.predict(in_array, batch_size=batch_size)[0]
-            predicted_word, predicted_vector = closest_word(word2vec, y)
+            predicted_word = idx_to_word[y.argmax()]
             sys.stdout.write(" {}".format(predicted_word))
             sys.stdout.flush()
         sys.stdout.write('\n')
 
-        model.save_weights('model.{}.iter{}.h5'.format(tag, iteration))
+        model.save_weights('model.{}.iter{}.h5'.format(tag, iteration), overwrite=True)
     print("Finished")
 
 
