@@ -1,11 +1,12 @@
 """
 Usage:
-        vectorify.py --dictionary <glove.txt> --input <corpus.txt> --tag <name>
+        vectorify.py --dictionary <glove.txt> --input <corpus.txt> --tag <name> [--model <filename.h5>]
 
 Arguments:
         -d, --dictionary <glove.txt>    A pretrained word vector model
         -i, --input <corpus.txt>        Input text to train on
         -t, --tag <name>                Name to identify this experiment
+        -m, --model <filename.h5>       Saved parameters to load
 """
 import re
 import sys
@@ -78,7 +79,7 @@ def build_model(wordvectors, batch_size, vocabulary):
     model.add(Dropout(0.2))
     model.add(Dense(len(vocabulary)))
     model.add(Activation('softmax'))
-    optimizer = RMSprop(lr=.001)
+    optimizer = RMSprop(lr=.01)
     model.compile(loss='categorical_crossentropy', optimizer=optimizer)
     print('Finished compiling model')
     return model
@@ -102,7 +103,7 @@ def generate_training_data(wordvectors, words, batch_size, word_to_idx):
                 indices[i] = 0
 
 
-def main(dict_file, corpus_file, tag):
+def main(dict_file, corpus_file, tag, model_filename=None):
     print("Loading dictionary {}".format(dict_file))
     lines = open(dict_file).readlines()
     print("Loaded {} lines".format(len(lines)))
@@ -122,12 +123,16 @@ def main(dict_file, corpus_file, tag):
 
     batch_size = 128
     model = build_model(wordvectors, batch_size, word_to_idx)
+    if model_filename:
+        print("Loading weights from file {}".format(model_filename))
+        model.load_weights(model_filename)
     generator = generate_training_data(wordvectors, words, batch_size, word_to_idx)
 
     start_time = time.time()
-    for iteration in range(100):
+    for iteration in range(1000):
         print("Starting iteration {} after {} seconds".format(iteration, time.time() - start_time))
-        batches_per_minute = 2 ** 16 / batch_size 
+        model.reset_states()
+        batches_per_minute = 2 ** 18 / batch_size 
         for i in range(batches_per_minute):
             X, y = next(generator)
             results = model.train_on_batch(X, y)
@@ -160,7 +165,7 @@ def main(dict_file, corpus_file, tag):
             sys.stdout.flush()
         sys.stdout.write('\n')
 
-        model.save_weights('model.{}.iter{}.h5'.format(tag, iteration), overwrite=True)
+        model.save_weights('models/{}.iter{}.h5'.format(tag, iteration), overwrite=True)
     print("Finished")
 
 
@@ -169,4 +174,5 @@ if __name__ == '__main__':
     dict_file = arguments['--dictionary']
     corpus_file = arguments['--input']
     tag = arguments['--tag']
-    main(dict_file, corpus_file, tag)
+    model = arguments['--model']
+    main(dict_file, corpus_file, tag, model)

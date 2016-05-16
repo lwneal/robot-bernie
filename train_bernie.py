@@ -5,6 +5,7 @@ from keras.datasets.data_utils import get_file
 from keras.optimizers import RMSprop
 import numpy as np
 import sys
+import time
 import random
 import sys
 import os
@@ -12,7 +13,7 @@ import re
 from StringIO import StringIO
 from LSTMPeephole import LSTMPeephole
 
-BATCH_SIZE = 256
+BATCH_SIZE = 2 ** 13
 
 def read_text_from_file(filename):
     text = open(filename).read()
@@ -70,13 +71,15 @@ def generate_training_data(text, char_indices, batch_size=BATCH_SIZE):
 
 def build_model(char_count, batch_size=BATCH_SIZE):
     model = Sequential()
-    model.add(GRU(512, return_sequences=True, batch_input_shape=(batch_size, 1, char_count), stateful=True))
+    model.add(GRU(1024, return_sequences=True, batch_input_shape=(batch_size, 1, char_count), stateful=True))
     model.add(Dropout(0.2))
-    model.add(GRU(512, return_sequences=False, stateful=True))
+    model.add(GRU(1024, return_sequences=False, stateful=True))
     model.add(Dropout(0.2))
     model.add(Dense(char_count))
     model.add(Activation('softmax'))
-    optimizer = RMSprop(lr=.0001)
+    learning_rate = .00001 * batch_size / (2.0 ** 10)
+    print("Running with batch size {} learning rate {}".format(batch_size, learning_rate))
+    optimizer = RMSprop(lr=learning_rate)
     model.compile(loss='categorical_crossentropy', optimizer=optimizer)
     return model
 
@@ -126,34 +129,41 @@ def main(run_name, text):
     char_indices, indices_char = make_char_lookup_table(text)
 
     model = build_model(char_count=len(char_indices))
+    print "Building single-stream model..."
+    fast_model = build_model(char_count=len(char_indices), batch_size=1)
 
     # train the model, output generated text after each iteration
     layers = [layer for layer in model.trainable_weights if len(layer.get_value().shape) > 1 and layer.get_value().shape[1] == 512]
     old_weights = [layer.get_value() for layer in layers]
     generator = generate_training_data(text, char_indices)
+    start_time = time.time()
+
+    model.load_weights('models/bern.iter399.h5')
+
     for iteration in range(1, 1000):
         print('-' * 50)
         print('Iteration {}'.format(iteration))
         model.reset_states()
 
-        for i in range(1024 * 4):
+        batches_per_minute = 2 ** 20 / BATCH_SIZE
+        for i in range(batches_per_minute):
             X, y = next(generator)
             results = model.train_on_batch(X, y)
             sys.stdout.write("\rBatch {} Loss: {}\t".format(i, results))
             sys.stdout.flush()
         sys.stdout.write('\n')
+        print ("Finished iteration {} after {:.2f} sec".format(iteration, time.time() - start_time))
 
-        build_visualization(layers, old_weights, run_name, iteration)
+        new_weights = [layer.get_value() for layer in layers]
+        #build_visualization(layers, old_weights, run_name, iteration)
+        old_weights = new_weights
         
-        """
-        history = model.fit_generator(generator, samples_per_epoch=2**16, nb_epoch=1, verbose=1)
-        print history.history
-        """
-
-        model.reset_states()
+        # Copy weights to a light-weight version of the model used for prediction
+        for slow_layer, fast_layer in zip(model.layers, fast_model.layers):
+            fast_layer.set_weights(slow_layer.get_weights())
         next_char = random.choice(char_indices.keys())
-        for i in range(512):
-            next_char = predict(model, next_char, char_indices, indices_char)
+        for i in range(512 * 2):
+            next_char = predict(fast_model, next_char, char_indices, indices_char, batch_size=1)
             sys.stdout.write(next_char)
             sys.stdout.flush()
         sys.stdout.write('\n')
