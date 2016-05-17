@@ -11,10 +11,12 @@ text = train_bernie.read_text_from_file(TEXT_FILENAME)
 char_indices, indices_char = bernie.make_char_lookup_table(text)
 model = bernie.load_model(char_indices)
 
+"""
 @app.route('/visualization')
 def visualization():
     weights = open('/tmp/visualization.png').read()
     return flask.Response(weights, mimetype='image/png')
+"""
 
 @app.route('/ask_question')
 def ask_question():
@@ -33,4 +35,4 @@ def send_static_file(path):
     return flask.send_from_directory('static', path)
 
 if __name__ == '__main__':
-    app.run('0.0.0.0', port=8001, debug=True)
+    app.run('0.0.0.0', port=8000, use_reloader=False)
